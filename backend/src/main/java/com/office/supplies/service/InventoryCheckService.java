@@ -106,6 +106,33 @@ public class InventoryCheckService extends ServiceImpl<InventoryCheckMapper, Inv
         if (!"DRAFT".equals(c.getStatus())) {
             throw new RuntimeException("只有草稿状态的盘点单可以完成");
         }
+        
+        List<InventoryCheckItem> items = inventoryCheckItemMapper.getItemsByCheckId(id);
+        java.util.Map<Long, Integer> stockAdjustments = new java.util.HashMap<>();
+        for (InventoryCheckItem item : items) {
+            if (item.getActualStock() == null) {
+                item.setActualStock(0);
+            }
+            if (item.getSystemStock() == null) {
+                item.setSystemStock(0);
+            }
+            int diff = item.getActualStock() - item.getSystemStock();
+            item.setDiffQuantity(diff);
+            if (diff != 0) {
+                stockAdjustments.put(item.getSupplyId(), diff);
+            }
+            inventoryCheckItemMapper.updateById(item);
+        }
+        
+        if (!stockAdjustments.isEmpty()) {
+            for (java.util.Map.Entry<Long, Integer> entry : stockAdjustments.entrySet()) {
+                Long supplyId = entry.getKey();
+                Integer diffQuantity = entry.getValue();
+                String remark = diffQuantity > 0 ? "盘点盈余" : "盘点亏损";
+                supplyService.adjustStock(supplyId, diffQuantity, c.getCheckNo(), remark);
+            }
+        }
+        
         c.setStatus("COMPLETED");
         this.updateById(c);
     }

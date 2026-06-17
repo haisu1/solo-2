@@ -36,9 +36,12 @@ public interface SupplyMapper extends BaseMapper<Supply> {
                                @Param("status") Integer status,
                                @Param("lowStock") Boolean lowStock);
 
-    @Update("UPDATE biz_supply SET stock = stock + #{quantity}, update_time = CURRENT_TIMESTAMP WHERE id = #{supplyId}")
-    int addStock(@Param("supplyId") Long supplyId, @Param("quantity") Integer quantity);
+    @Select("SELECT * FROM biz_supply WHERE id = #{supplyId} FOR UPDATE")
+    Supply selectByIdForUpdate(@Param("supplyId") Long supplyId);
 
-    @Update("UPDATE biz_supply SET stock = stock - #{quantity}, update_time = CURRENT_TIMESTAMP WHERE id = #{supplyId} AND stock >= #{quantity}")
-    int reduceStock(@Param("supplyId") Long supplyId, @Param("quantity") Integer quantity);
+    @Update("UPDATE biz_supply SET stock = stock + #{quantity}, update_time = CURRENT_TIMESTAMP WHERE id = #{supplyId} AND version = #{version}")
+    int addStock(@Param("supplyId") Long supplyId, @Param("quantity") Integer quantity, @Param("version") Integer version);
+
+    @Update("UPDATE biz_supply SET stock = stock - #{quantity}, update_time = CURRENT_TIMESTAMP WHERE id = #{supplyId} AND stock >= #{quantity} AND version = #{version}")
+    int reduceStock(@Param("supplyId") Long supplyId, @Param("quantity") Integer quantity, @Param("version") Integer version);
 }

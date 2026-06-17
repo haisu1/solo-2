@@ -96,17 +96,22 @@ public class RequisitionService extends ServiceImpl<RequisitionMapper, Requisiti
             throw new RuntimeException("申领单状态不允许审批");
         }
         User user = UserContext.getCurrentUser();
+        
+        if ("APPROVED".equals(approveStatus)) {
+            List<RequisitionItem> items = requisitionItemMapper.getItemsByRequisitionId(id);
+            java.util.Map<Long, Integer> stockRequirements = new java.util.HashMap<>();
+            for (RequisitionItem item : items) {
+                stockRequirements.merge(item.getSupplyId(), item.getQuantity(), Integer::sum);
+            }
+            supplyService.checkStockAvailability(stockRequirements);
+            supplyService.batchReduceStock(stockRequirements, r.getRequisitionNo(), "领用发放");
+        }
+        
         r.setApprovedBy(user.getId());
         r.setApproveTime(LocalDateTime.now());
         r.setApproveRemark(approveRemark);
         r.setStatus(approveStatus);
         this.updateById(r);
-        if ("APPROVED".equals(approveStatus)) {
-            List<RequisitionItem> items = requisitionItemMapper.getItemsByRequisitionId(id);
-            for (RequisitionItem item : items) {
-                supplyService.reduceStock(item.getSupplyId(), item.getQuantity(), r.getRequisitionNo(), "领用发放");
-            }
-        }
     }
 
     @Transactional(rollbackFor = Exception.class)

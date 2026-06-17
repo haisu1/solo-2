@@ -72,6 +72,7 @@ CREATE TABLE biz_supply (
     image_url VARCHAR(500),
     description VARCHAR(500),
     status INT DEFAULT 1,
+    version INT DEFAULT 0,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

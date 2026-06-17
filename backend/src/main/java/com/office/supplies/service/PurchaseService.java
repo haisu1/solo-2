@@ -116,8 +116,12 @@ public class PurchaseService extends ServiceImpl<PurchaseMapper, Purchase> {
             throw new RuntimeException("只有已审批的采购单可以入库");
         }
         List<PurchaseItem> items = purchaseItemMapper.getItemsByPurchaseId(id);
+        java.util.Map<Long, Integer> stockInItems = new java.util.HashMap<>();
         for (PurchaseItem item : items) {
-            supplyService.addStock(item.getSupplyId(), item.getQuantity(), p.getPurchaseNo(), "采购入库");
+            stockInItems.merge(item.getSupplyId(), item.getQuantity(), Integer::sum);
+        }
+        for (java.util.Map.Entry<Long, Integer> entry : stockInItems.entrySet()) {
+            supplyService.addStock(entry.getKey(), entry.getValue(), p.getPurchaseNo(), "采购入库");
         }
         p.setStatus("STOCKED");
         this.updateById(p);
