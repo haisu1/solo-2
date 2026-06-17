@@ -47,7 +47,7 @@ public class SystemController {
                 user.setPassword("123456");
             }
             userService.saveUser(user);
-            return Result.success("创建成功");
+            return Result.successMsg("创建成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
@@ -58,7 +58,7 @@ public class SystemController {
         user.setId(id);
         try {
             userService.saveUser(user);
-            return Result.success("更新成功");
+            return Result.successMsg("更新成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
@@ -67,7 +67,7 @@ public class SystemController {
     @DeleteMapping("/users/{id}")
     public Result<Void> deleteUser(@PathVariable Long id) {
         userService.removeById(id);
-        return Result.success("删除成功");
+        return Result.successMsg("删除成功");
     }
 
     @GetMapping("/roles")

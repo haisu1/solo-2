@@ -52,7 +52,7 @@ public class InventoryController {
             @RequestBody List<InventoryCheckItem> items) {
         try {
             inventoryCheckService.updateCheckItems(checkId, items);
-            return Result.success("更新成功");
+            return Result.successMsg("更新成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
@@ -62,7 +62,7 @@ public class InventoryController {
     public Result<Void> completeCheck(@PathVariable Long id) {
         try {
             inventoryCheckService.completeCheck(id);
-            return Result.success("盘点完成");
+            return Result.successMsg("盘点完成");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

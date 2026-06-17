@@ -33,6 +33,6 @@ public class ProfileController {
         user.setRoleId(null);
         user.setStatus(null);
         userService.updateById(user);
-        return Result.success("更新成功");
+        return Result.successMsg("更新成功");
     }
 }

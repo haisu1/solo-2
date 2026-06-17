@@ -52,7 +52,7 @@ public class RequisitionController {
         }
         try {
             requisitionService.approveRequisition(id, status, remark);
-            return Result.success("APPROVED".equals(status) ? "审批通过" : "审批驳回");
+            return Result.successMsg("APPROVED".equals(status) ? "审批通过" : "审批驳回");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
@@ -62,7 +62,7 @@ public class RequisitionController {
     public Result<Void> cancelRequisition(@PathVariable Long id) {
         try {
             requisitionService.cancelRequisition(id);
-            return Result.success("取消成功");
+            return Result.successMsg("取消成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

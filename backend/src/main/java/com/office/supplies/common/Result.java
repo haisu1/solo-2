@@ -29,6 +29,13 @@ public class Result<T> implements Serializable {
         return r;
     }
 
+    public static Result<Void> successMsg(String message) {
+        Result<Void> r = new Result<>();
+        r.setCode(200);
+        r.setMessage(message);
+        return r;
+    }
+
     public static <T> Result<T> error(String message) {
         return error(500, message);
     }

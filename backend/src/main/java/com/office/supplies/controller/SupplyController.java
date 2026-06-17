@@ -36,20 +36,20 @@ public class SupplyController {
     @PostMapping("/categories")
     public Result<Void> createCategory(@RequestBody Category category) {
         categoryService.save(category);
-        return Result.success("创建成功");
+        return Result.successMsg("创建成功");
     }
 
     @PutMapping("/categories/{id}")
     public Result<Void> updateCategory(@PathVariable Long id, @RequestBody Category category) {
         category.setId(id);
         categoryService.updateById(category);
-        return Result.success("更新成功");
+        return Result.successMsg("更新成功");
     }
 
     @DeleteMapping("/categories/{id}")
     public Result<Void> deleteCategory(@PathVariable Long id) {
         categoryService.removeById(id);
-        return Result.success("删除成功");
+        return Result.successMsg("删除成功");
     }
 
     @GetMapping("/page")
@@ -85,20 +85,20 @@ public class SupplyController {
         if (supply.getMaxStock() == null) supply.setMaxStock(0);
         if (supply.getStatus() == null) supply.setStatus(1);
         supplyService.save(supply);
-        return Result.success("创建成功");
+        return Result.successMsg("创建成功");
     }
 
     @PutMapping("/{id}")
     public Result<Void> updateSupply(@PathVariable Long id, @RequestBody Supply supply) {
         supply.setId(id);
         supplyService.updateById(supply);
-        return Result.success("更新成功");
+        return Result.successMsg("更新成功");
     }
 
     @DeleteMapping("/{id}")
     public Result<Void> deleteSupply(@PathVariable Long id) {
         supplyService.removeById(id);
-        return Result.success("删除成功");
+        return Result.successMsg("删除成功");
     }
 
     @PostMapping("/{id}/stock-add")
@@ -107,7 +107,7 @@ public class SupplyController {
         String remark = params.get("remark") != null ? params.get("remark").toString() : "";
         try {
             supplyService.addStock(id, quantity, null, remark);
-            return Result.success("入库成功");
+            return Result.successMsg("入库成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

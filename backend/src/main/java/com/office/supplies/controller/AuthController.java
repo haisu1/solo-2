@@ -43,7 +43,7 @@ public class AuthController {
     @PostMapping("/logout")
     public Result<Void> logout() {
         UserContext.clear();
-        return Result.success("退出成功");
+        return Result.successMsg("退出成功");
     }
 
     @PutMapping("/password")
@@ -60,6 +60,6 @@ public class AuthController {
         }
         user.setPassword(newPassword);
         userService.updateById(user);
-        return Result.success("密码修改成功");
+        return Result.successMsg("密码修改成功");
     }
 }

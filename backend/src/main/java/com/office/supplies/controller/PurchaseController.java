@@ -50,7 +50,7 @@ public class PurchaseController {
         }
         try {
             purchaseService.approvePurchase(id, status);
-            return Result.success("APPROVED".equals(status) ? "审批通过" : "审批驳回");
+            return Result.successMsg("APPROVED".equals(status) ? "审批通过" : "审批驳回");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
@@ -60,7 +60,7 @@ public class PurchaseController {
     public Result<Void> stockIn(@PathVariable Long id) {
         try {
             purchaseService.stockIn(id);
-            return Result.success("入库成功");
+            return Result.successMsg("入库成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
