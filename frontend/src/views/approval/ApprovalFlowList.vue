@@ -267,7 +267,7 @@ export default {
       try {
         const [deptRes, catRes, userRes, roleRes] = await Promise.all([
           this.$http.get('/api/system/departments'),
-          this.$http.get('/api/supply/categories'),
+          this.$http.get('/api/supplies/categories'),
           this.$http.get('/api/system/users'),
           this.$http.get('/api/system/roles')
         ])

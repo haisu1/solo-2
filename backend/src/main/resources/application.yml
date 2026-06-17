@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  main:
+    allow-circular-references: true
   datasource:
     url: jdbc:h2:file:./data/office_supplies;AUTO_SERVER=TRUE
     driver-class-name: org.h2.Driver

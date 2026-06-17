@@ -62,7 +62,7 @@ public class ApprovalRecord implements Serializable {
             Duration d = Duration.between(startTime, approveTime);
             this.durationMinutes = d.toMinutes();
             long hours = d.toHours();
-            long mins = d.toMinutesPart();
+            long mins = d.toMinutes() % 60;
             if (hours > 0) {
                 this.durationText = hours + "小时" + mins + "分钟";
             } else {

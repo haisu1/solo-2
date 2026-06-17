@@ -9,8 +9,8 @@
             <el-button :type="activeTab === 'REQUISITION'" @click="switchTab('REQUISITION')">申领单</el-button>
             <el-button :type="activeTab === 'PURCHASE'" @click="switchTab('PURCHASE')">采购单</el-button>
           </el-button-group>
-          <el-button type="danger" :disabled="selectedRows.length === 0" @click="showBatchDialog = true">
-            批量审批 ({{ selectedRows.length })</el-button>
+          <el-button type="danger" :disabled="selectedRows.length === 0" @click="batchDialogVisible = true">
+            批量审批 ({{ selectedRows.length }})</el-button>
         </div>
       </div>
 
@@ -62,7 +62,7 @@
           <template slot-scope="scope">
             <span v-if="scope.row.timeoutMinutes != null && scope.row.timeoutMinutes < 0"
               style="color: #F56C6C;">
-              已超时 {{ Math.abs(Math.floor(scope.row.timeoutMinutes / 60) }}小时
+              已超时 {{ Math.abs(Math.floor(scope.row.timeoutMinutes / 60)) }}小时
             </span>
             <span v-else-if="scope.row.timeoutMinutes != null && scope.row.timeoutMinutes < 60"
               style="color: #E6A23C;">
@@ -95,7 +95,7 @@
       </el-table>
     </el-card>
 
-    <el-dialog :title="'审批详情 - ' + (currentRow?.bizNo" :visible.sync="detailVisible" width="1000px" top="5vh">
+    <el-dialog :title="'审批详情 - ' + (currentRow ? currentRow.bizNo : '')" :visible.sync="detailVisible" width="1000px" top="5vh">
       <div v-if="currentRow">
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="业务类型">
@@ -192,7 +192,7 @@
 
     <el-dialog title="批量审批" :visible.sync="batchDialogVisible" width="500px">
       <el-alert
-        title="将对所选的 {{ selectedRows.length }} 条单据执行相同的审批操作"
+        :title="'将对所选的 ' + selectedRows.length + ' 条单据执行相同的审批操作'"
         type="warning" show-icon :closable="false" style="margin-bottom:15px;">
       </el-alert>
       <el-form :model="batchForm" label-width="100px">
@@ -384,7 +384,7 @@ export default {
     },
     async submitBatch() {
       const data = {
-        bizType: this.activeTab === 'all' ? (this.selectedRows[0]?.bizType : this.activeTab,
+        bizType: this.activeTab === 'all' ? (this.selectedRows[0] && this.selectedRows[0].bizType) : this.activeTab,
         bizIds: this.selectedRows.map(r => r.bizId),
         action: this.batchForm.action,
         remark: this.batchForm.remark
