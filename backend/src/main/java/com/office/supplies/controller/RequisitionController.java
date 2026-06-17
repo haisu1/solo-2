@@ -67,4 +67,30 @@ public class RequisitionController {
             return Result.error(e.getMessage());
         }
     }
+
+    @PostMapping("/{id}/withdraw")
+    public Result<Void> withdrawApproval(@PathVariable Long id,
+                                         @RequestBody(required = false) Map<String, String> params) {
+        try {
+            String remark = params != null ? params.get("remark") : null;
+            requisitionService.withdrawApproval(id, remark);
+            return Result.successMsg("撤回成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/transfer")
+    public Result<Void> transferApproval(@PathVariable Long id,
+                                         @RequestBody Map<String, Object> params) {
+        try {
+            String remark = (String) params.get("remark");
+            Long transferToUserId = params.get("transferToUserId") != null
+                    ? Long.valueOf(params.get("transferToUserId").toString()) : null;
+            requisitionService.transferApproval(id, remark, transferToUserId);
+            return Result.successMsg("转交成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

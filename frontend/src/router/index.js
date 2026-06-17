@@ -100,6 +100,18 @@ const routes = [
         name: 'Profile',
         component: () => import('@/views/Profile.vue'),
         meta: { title: '个人中心' }
+      },
+      {
+        path: 'approval/flow',
+        name: 'ApprovalFlowList',
+        component: () => import('@/views/approval/ApprovalFlowList.vue'),
+        meta: { title: '审批流程配置', roles: ['ADMIN'] }
+      },
+      {
+        path: 'approval/tasks',
+        name: 'ApprovalTaskCenter',
+        component: () => import('@/views/approval/ApprovalTaskCenter.vue'),
+        meta: { title: '我的待办审批', roles: ['ADMIN', 'ADMIN_STAFF', 'DEPT_MANAGER', 'EMPLOYEE'] }
       }
     ]
   },

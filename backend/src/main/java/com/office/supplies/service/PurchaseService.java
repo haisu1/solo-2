@@ -1,6 +1,8 @@
 package com.office.supplies.service;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.office.supplies.common.ApprovalStatus;
+import com.office.supplies.common.BizType;
 import com.office.supplies.common.PageQuery;
 import com.office.supplies.common.PageResult;
 import com.office.supplies.common.UserContext;
@@ -17,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
@@ -30,6 +33,9 @@ public class PurchaseService extends ServiceImpl<PurchaseMapper, Purchase> {
 
     @Resource
     private SupplyService supplyService;
+
+    @Resource
+    private ApprovalEngineService approvalEngineService;
 
     private static final AtomicInteger SEQ = new AtomicInteger(1);
 
@@ -70,7 +76,7 @@ public class PurchaseService extends ServiceImpl<PurchaseMapper, Purchase> {
         User user = UserContext.getCurrentUser();
         purchase.setPurchaseNo(generateNo());
         purchase.setCreatedBy(user.getId());
-        purchase.setStatus("PENDING");
+        purchase.setStatus(ApprovalStatus.PENDING_LEVEL + "1");
         BigDecimal total = BigDecimal.ZERO;
         if (purchase.getItems() != null) {
             for (PurchaseItem item : purchase.getItems()) {
@@ -87,23 +93,40 @@ public class PurchaseService extends ServiceImpl<PurchaseMapper, Purchase> {
                 purchaseItemMapper.insert(item);
             }
         }
+        Long categoryId = getFirstCategoryId(purchase.getId());
+        approvalEngineService.initApproval(
+                BizType.PURCHASE,
+                purchase.getId(),
+                purchase.getPurchaseNo(),
+                user.getId(),
+                user.getDepartmentId(),
+                categoryId,
+                total
+        );
         return purchase;
     }
 
+    private Long getFirstCategoryId(Long purchaseId) {
+        List<PurchaseItem> items = purchaseItemMapper.getItemsByPurchaseId(purchaseId);
+        if (items != null && !items.isEmpty() && items.get(0).getSupplyId() != null) {
+            com.office.supplies.entity.Supply supply = supplyService.getById(items.get(0).getSupplyId());
+            if (supply != null) {
+                return supply.getCategoryId();
+            }
+        }
+        return null;
+    }
+
     @Transactional(rollbackFor = Exception.class)
-    public void approvePurchase(Long id, String approveStatus) {
+    public void approvePurchase(Long id, String approveStatus, String approveRemark) {
         Purchase p = this.getById(id);
         if (p == null) {
             throw new RuntimeException("采购单不存在");
         }
-        if (!"PENDING".equals(p.getStatus())) {
+        if (!ApprovalStatus.isPendingStatus(p.getStatus())) {
             throw new RuntimeException("采购单状态不允许审批");
         }
-        User user = UserContext.getCurrentUser();
-        p.setApprovedBy(user.getId());
-        p.setApproveTime(LocalDateTime.now());
-        p.setStatus(approveStatus);
-        this.updateById(p);
+        approvalEngineService.approve(BizType.PURCHASE, id, approveStatus, approveRemark, null);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -112,18 +135,28 @@ public class PurchaseService extends ServiceImpl<PurchaseMapper, Purchase> {
         if (p == null) {
             throw new RuntimeException("采购单不存在");
         }
-        if (!"APPROVED".equals(p.getStatus())) {
+        if (!ApprovalStatus.APPROVED.equals(p.getStatus())) {
             throw new RuntimeException("只有已审批的采购单可以入库");
         }
         List<PurchaseItem> items = purchaseItemMapper.getItemsByPurchaseId(id);
-        java.util.Map<Long, Integer> stockInItems = new java.util.HashMap<>();
+        Map<Long, Integer> stockInItems = new java.util.HashMap<>();
         for (PurchaseItem item : items) {
             stockInItems.merge(item.getSupplyId(), item.getQuantity(), Integer::sum);
         }
-        for (java.util.Map.Entry<Long, Integer> entry : stockInItems.entrySet()) {
+        for (Map.Entry<Long, Integer> entry : stockInItems.entrySet()) {
             supplyService.addStock(entry.getKey(), entry.getValue(), p.getPurchaseNo(), "采购入库");
         }
-        p.setStatus("STOCKED");
+        p.setStatus(ApprovalStatus.STOCKED);
         this.updateById(p);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void withdrawApproval(Long id, String remark) {
+        approvalEngineService.withdraw(BizType.PURCHASE, id, remark);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void transferApproval(Long id, String remark, Long transferToUserId) {
+        approvalEngineService.approve(BizType.PURCHASE, id, "TRANSFER", remark, transferToUserId);
     }
 }

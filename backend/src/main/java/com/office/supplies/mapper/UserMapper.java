@@ -33,4 +33,10 @@ public interface UserMapper extends BaseMapper<User> {
             "ORDER BY u.id DESC" +
             "</script>")
     List<User> getUserList(@Param("keyword") String keyword);
+
+    @Select("SELECT u.id FROM sys_user u LEFT JOIN sys_role r ON u.role_id = r.id WHERE r.role_code = #{roleCode}")
+    List<Long> getUserIdsByRoleCode(@Param("roleCode") String roleCode);
+
+    @Select("SELECT u.id FROM sys_user u LEFT JOIN sys_role r ON u.role_id = r.id WHERE r.role_code IN ('DEPT_MANAGER','ADMIN')")
+    List<Long> getDepartmentLeaderIds();
 }

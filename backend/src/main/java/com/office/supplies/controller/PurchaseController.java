@@ -45,11 +45,12 @@ public class PurchaseController {
             @PathVariable Long id,
             @RequestBody Map<String, String> params) {
         String status = params.get("status");
+        String remark = params.get("remark");
         if (status == null || (!"APPROVED".equals(status) && !"REJECTED".equals(status))) {
             return Result.error("审批状态不正确");
         }
         try {
-            purchaseService.approvePurchase(id, status);
+            purchaseService.approvePurchase(id, status, remark);
             return Result.successMsg("APPROVED".equals(status) ? "审批通过" : "审批驳回");
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -61,6 +62,32 @@ public class PurchaseController {
         try {
             purchaseService.stockIn(id);
             return Result.successMsg("入库成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/withdraw")
+    public Result<Void> withdrawApproval(@PathVariable Long id,
+                                         @RequestBody(required = false) Map<String, String> params) {
+        try {
+            String remark = params != null ? params.get("remark") : null;
+            purchaseService.withdrawApproval(id, remark);
+            return Result.successMsg("撤回成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/transfer")
+    public Result<Void> transferApproval(@PathVariable Long id,
+                                         @RequestBody Map<String, Object> params) {
+        try {
+            String remark = (String) params.get("remark");
+            Long transferToUserId = params.get("transferToUserId") != null
+                    ? Long.valueOf(params.get("transferToUserId").toString()) : null;
+            purchaseService.transferApproval(id, remark, transferToUserId);
+            return Result.successMsg("转交成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

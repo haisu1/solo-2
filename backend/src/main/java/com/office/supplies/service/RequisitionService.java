@@ -1,6 +1,8 @@
 package com.office.supplies.service;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.office.supplies.common.ApprovalStatus;
+import com.office.supplies.common.BizType;
 import com.office.supplies.common.PageQuery;
 import com.office.supplies.common.PageResult;
 import com.office.supplies.common.UserContext;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -29,6 +32,9 @@ public class RequisitionService extends ServiceImpl<RequisitionMapper, Requisiti
 
     @Resource
     private SupplyService supplyService;
+
+    @Resource
+    private ApprovalEngineService approvalEngineService;
 
     private static final AtomicInteger SEQ = new AtomicInteger(1);
 
@@ -75,15 +81,54 @@ public class RequisitionService extends ServiceImpl<RequisitionMapper, Requisiti
         requisition.setUserId(user.getId());
         requisition.setDepartmentId(user.getDepartmentId());
         requisition.setRequisitionNo(generateNo());
-        requisition.setStatus("PENDING");
+        requisition.setStatus(ApprovalStatus.PENDING_LEVEL + "1");
         this.save(requisition);
         if (requisition.getItems() != null) {
             for (RequisitionItem item : requisition.getItems()) {
                 item.setRequisitionId(requisition.getId());
+                if (item.getUnitPrice() == null) {
+                    item.setUnitPrice(BigDecimal.ZERO);
+                }
+                if (item.getQuantity() != null && item.getUnitPrice() != null) {
+                    item.setTotalPrice(item.getUnitPrice().multiply(new BigDecimal(item.getQuantity())));
+                }
                 requisitionItemMapper.insert(item);
             }
         }
+        BigDecimal totalAmount = calculateTotalAmount(requisition.getId());
+        Long categoryId = getFirstCategoryId(requisition.getId());
+        approvalEngineService.initApproval(
+                BizType.REQUISITION,
+                requisition.getId(),
+                requisition.getRequisitionNo(),
+                user.getId(),
+                user.getDepartmentId(),
+                categoryId,
+                totalAmount
+        );
         return requisition;
+    }
+
+    private BigDecimal calculateTotalAmount(Long requisitionId) {
+        List<RequisitionItem> items = requisitionItemMapper.getItemsByRequisitionId(requisitionId);
+        BigDecimal total = BigDecimal.ZERO;
+        for (RequisitionItem item : items) {
+            if (item.getTotalPrice() != null) {
+                total = total.add(item.getTotalPrice());
+            }
+        }
+        return total;
+    }
+
+    private Long getFirstCategoryId(Long requisitionId) {
+        List<RequisitionItem> items = requisitionItemMapper.getItemsByRequisitionId(requisitionId);
+        if (items != null && !items.isEmpty() && items.get(0).getSupplyId() != null) {
+            com.office.supplies.entity.Supply supply = supplyService.getById(items.get(0).getSupplyId());
+            if (supply != null) {
+                return supply.getCategoryId();
+            }
+        }
+        return null;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -92,26 +137,10 @@ public class RequisitionService extends ServiceImpl<RequisitionMapper, Requisiti
         if (r == null) {
             throw new RuntimeException("申领单不存在");
         }
-        if (!"PENDING".equals(r.getStatus())) {
+        if (!ApprovalStatus.isPendingStatus(r.getStatus())) {
             throw new RuntimeException("申领单状态不允许审批");
         }
-        User user = UserContext.getCurrentUser();
-        
-        if ("APPROVED".equals(approveStatus)) {
-            List<RequisitionItem> items = requisitionItemMapper.getItemsByRequisitionId(id);
-            java.util.Map<Long, Integer> stockRequirements = new java.util.HashMap<>();
-            for (RequisitionItem item : items) {
-                stockRequirements.merge(item.getSupplyId(), item.getQuantity(), Integer::sum);
-            }
-            supplyService.checkStockAvailability(stockRequirements);
-            supplyService.batchReduceStock(stockRequirements, r.getRequisitionNo(), "领用发放");
-        }
-        
-        r.setApprovedBy(user.getId());
-        r.setApproveTime(LocalDateTime.now());
-        r.setApproveRemark(approveRemark);
-        r.setStatus(approveStatus);
-        this.updateById(r);
+        approvalEngineService.approve(BizType.REQUISITION, id, approveStatus, approveRemark, null);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -120,10 +149,20 @@ public class RequisitionService extends ServiceImpl<RequisitionMapper, Requisiti
         if (r == null) {
             throw new RuntimeException("申领单不存在");
         }
-        if (!"PENDING".equals(r.getStatus())) {
+        if (!ApprovalStatus.isPendingStatus(r.getStatus())) {
             throw new RuntimeException("只有待审批的申领单可以取消");
         }
-        r.setStatus("CANCELLED");
+        r.setStatus(ApprovalStatus.CANCELLED);
         this.updateById(r);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void withdrawApproval(Long id, String remark) {
+        approvalEngineService.withdraw(BizType.REQUISITION, id, remark);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void transferApproval(Long id, String remark, Long transferToUserId) {
+        approvalEngineService.approve(BizType.REQUISITION, id, "TRANSFER", remark, transferToUserId);
     }
 }

@@ -9,6 +9,9 @@ DROP TABLE IF EXISTS biz_purchase;
 DROP TABLE IF EXISTS biz_purchase_item;
 DROP TABLE IF EXISTS biz_inventory_check;
 DROP TABLE IF EXISTS biz_inventory_check_item;
+DROP TABLE IF EXISTS biz_approval_record;
+DROP TABLE IF EXISTS biz_approval_node;
+DROP TABLE IF EXISTS biz_approval_flow;
 DROP TABLE IF EXISTS biz_stock_log;
 
 CREATE TABLE sys_role (
@@ -156,5 +159,54 @@ CREATE TABLE biz_stock_log (
     related_no VARCHAR(50),
     operator_id BIGINT,
     remark VARCHAR(500),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE biz_approval_flow (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    flow_name VARCHAR(200) NOT NULL,
+    biz_type VARCHAR(50) NOT NULL,
+    department_id BIGINT,
+    category_id BIGINT,
+    min_amount DECIMAL(12,2) DEFAULT 0,
+    max_amount DECIMAL(12,2) DEFAULT 99999999.99,
+    priority INT DEFAULT 0,
+    status INT DEFAULT 1,
+    node_config TEXT,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE biz_approval_node (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    flow_id BIGINT NOT NULL,
+    node_level INT NOT NULL,
+    node_name VARCHAR(100) NOT NULL,
+    approver_type VARCHAR(20) NOT NULL,
+    approver_ids VARCHAR(500),
+    role_code VARCHAR(50),
+    timeout_hours INT DEFAULT 24,
+    can_transfer INT DEFAULT 1,
+    can_withdraw INT DEFAULT 1,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE biz_approval_record (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    biz_type VARCHAR(50) NOT NULL,
+    biz_id BIGINT NOT NULL,
+    biz_no VARCHAR(50),
+    flow_id BIGINT,
+    current_level INT DEFAULT 1,
+    total_levels INT DEFAULT 1,
+    node_name VARCHAR(100),
+    approver_id BIGINT,
+    approver_name VARCHAR(50),
+    action VARCHAR(20),
+    remark VARCHAR(500),
+    start_time TIMESTAMP,
+    approve_time TIMESTAMP,
+    transfer_from_id BIGINT,
+    transfer_from_name VARCHAR(50),
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

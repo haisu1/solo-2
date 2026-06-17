@@ -82,6 +82,20 @@
           <i class="el-icon-s-data"></i>
           <span slot="title">数据统计</span>
         </el-menu-item>
+        <el-submenu index="approval">
+          <template slot="title">
+            <i class="el-icon-s-check"></i>
+            <span>审批中心</span>
+          </template>
+          <el-menu-item index="/approval/tasks">
+            <i class="el-icon-message-solid"></i>
+            <span slot="title">我的待办</span>
+          </el-menu-item>
+          <el-menu-item index="/approval/flow" v-if="isAdmin">
+            <i class="el-icon-setting"></i>
+            <span slot="title">流程配置</span>
+          </el-menu-item>
+        </el-submenu>
         <el-menu-item index="/system/users" v-if="isAdmin">
           <i class="el-icon-user"></i>
           <span slot="title">用户管理</span>

@@ -7,7 +7,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.office.supplies.common.JwtUtil;
 import com.office.supplies.common.PageQuery;
 import com.office.supplies.common.PageResult;
+import com.office.supplies.entity.Role;
 import com.office.supplies.entity.User;
+import com.office.supplies.mapper.RoleMapper;
 import com.office.supplies.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,9 @@ public class UserService extends ServiceImpl<UserMapper, User> {
     @Resource
     private UserMapper userMapper;
 
+    @Resource
+    private RoleMapper roleMapper;
+
     public Map<String, Object> login(String username, String password) {
         User user = userMapper.getUserByUsername(username);
         if (user == null) {
@@ -51,6 +56,24 @@ public class UserService extends ServiceImpl<UserMapper, User> {
 
     public User getUserDetail(Long id) {
         return userMapper.getUserDetail(id);
+    }
+
+    public Role getRoleById(Long roleId) {
+        if (roleId == null) {
+            return null;
+        }
+        return roleMapper.selectById(roleId);
+    }
+
+    public List<Long> getUserIdsByRoleCode(String roleCode) {
+        if (roleCode == null || roleCode.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return userMapper.getUserIdsByRoleCode(roleCode);
+    }
+
+    public List<Long> getDepartmentLeaderIds() {
+        return userMapper.getDepartmentLeaderIds();
     }
 
     public PageResult<User> getUserPage(PageQuery query) {
