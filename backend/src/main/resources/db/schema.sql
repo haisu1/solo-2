@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS biz_approval_node;
 DROP TABLE IF EXISTS biz_approval_flow;
 DROP TABLE IF EXISTS biz_stock_log;
 DROP TABLE IF EXISTS biz_warning_message;
+DROP TABLE IF EXISTS biz_sequence;
 
 CREATE TABLE sys_role (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -226,4 +227,15 @@ CREATE TABLE biz_warning_message (
     read_flag INT DEFAULT 0,
     read_time TIMESTAMP,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE biz_sequence (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    seq_name VARCHAR(50) NOT NULL UNIQUE,
+    seq_date VARCHAR(8) NOT NULL,
+    current_value INT DEFAULT 1,
+    max_value INT DEFAULT 9999,
+    version INT DEFAULT 0,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

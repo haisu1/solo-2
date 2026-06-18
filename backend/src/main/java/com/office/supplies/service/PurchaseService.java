@@ -1,29 +1,34 @@
 package com.office.supplies.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.office.supplies.common.ApprovalStatus;
 import com.office.supplies.common.BizType;
 import com.office.supplies.common.PageQuery;
 import com.office.supplies.common.PageResult;
+import com.office.supplies.common.PageResultConverter;
 import com.office.supplies.common.UserContext;
 import com.office.supplies.entity.Purchase;
 import com.office.supplies.entity.PurchaseItem;
 import com.office.supplies.entity.User;
 import com.office.supplies.mapper.PurchaseItemMapper;
 import com.office.supplies.mapper.PurchaseMapper;
+import com.office.supplies.query.PurchaseQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class PurchaseService extends ServiceImpl<PurchaseMapper, Purchase> {
+
+    private static final Logger logger = LoggerFactory.getLogger(PurchaseService.class);
 
     @Resource
     private PurchaseMapper purchaseMapper;
@@ -37,30 +42,35 @@ public class PurchaseService extends ServiceImpl<PurchaseMapper, Purchase> {
     @Resource
     private ApprovalEngineService approvalEngineService;
 
-    private static final AtomicInteger SEQ = new AtomicInteger(1);
+    @Resource
+    private SequenceGeneratorService sequenceGeneratorService;
+
+    private static final String SEQ_NAME = "PURCHASE";
 
     private String generateNo() {
-        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int seq = SEQ.getAndIncrement();
-        if (seq > 9999) {
-            SEQ.set(1);
-            seq = 1;
-        }
-        return "PU" + date + String.format("%04d", seq);
+        return sequenceGeneratorService.generateNo("PU", SEQ_NAME);
     }
 
+    @Deprecated
     public PageResult<Purchase> getPurchasePage(PageQuery query, String status) {
-        List<Purchase> list = purchaseMapper.getPurchaseList(query.getKeyword(), status);
-        long total = list.size();
-        long start = (query.getCurrent() - 1) * query.getSize();
-        long end = Math.min(start + query.getSize(), total);
-        List<Purchase> records = list.subList((int) start, (int) end);
-        PageResult<Purchase> result = new PageResult<>();
-        result.setTotal(total);
-        result.setRecords(records);
-        result.setCurrent(query.getCurrent());
-        result.setSize(query.getSize());
-        return result;
+        PurchaseQuery purchaseQuery = PurchaseQuery.builder()
+                .current(query.getCurrent())
+                .size(query.getSize())
+                .keyword(query.getKeyword())
+                .status(status)
+                .build();
+        return getPurchasePage(purchaseQuery);
+    }
+
+    public PageResult<Purchase> getPurchasePage(PurchaseQuery query) {
+        long startTime = System.currentTimeMillis();
+        Page<Purchase> page = new Page<>(query.getCurrent(), query.getSize());
+        IPage<Purchase> resultPage = purchaseMapper.selectPurchasePage(page, query);
+        long costTime = System.currentTimeMillis() - startTime;
+        if (costTime > 1000) {
+            logger.warn("Slow query detected - getPurchasePage cost: {}ms, params: {}", costTime, query);
+        }
+        return PageResultConverter.convert(resultPage, query.getCurrent(), query.getSize());
     }
 
     public Purchase getPurchaseDetail(Long id) {

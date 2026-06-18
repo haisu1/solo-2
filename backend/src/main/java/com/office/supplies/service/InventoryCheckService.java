@@ -1,8 +1,11 @@
 package com.office.supplies.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.office.supplies.common.PageQuery;
 import com.office.supplies.common.PageResult;
+import com.office.supplies.common.PageResultConverter;
 import com.office.supplies.common.UserContext;
 import com.office.supplies.entity.InventoryCheck;
 import com.office.supplies.entity.InventoryCheckItem;
@@ -10,17 +13,20 @@ import com.office.supplies.entity.Supply;
 import com.office.supplies.entity.User;
 import com.office.supplies.mapper.InventoryCheckItemMapper;
 import com.office.supplies.mapper.InventoryCheckMapper;
+import com.office.supplies.query.InventoryCheckQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class InventoryCheckService extends ServiceImpl<InventoryCheckMapper, InventoryCheck> {
+
+    private static final Logger logger = LoggerFactory.getLogger(InventoryCheckService.class);
 
     @Resource
     private InventoryCheckMapper inventoryCheckMapper;
@@ -31,30 +37,35 @@ public class InventoryCheckService extends ServiceImpl<InventoryCheckMapper, Inv
     @Resource
     private SupplyService supplyService;
 
-    private static final AtomicInteger SEQ = new AtomicInteger(1);
+    @Resource
+    private SequenceGeneratorService sequenceGeneratorService;
+
+    private static final String SEQ_NAME = "INVENTORY_CHECK";
 
     private String generateNo() {
-        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int seq = SEQ.getAndIncrement();
-        if (seq > 9999) {
-            SEQ.set(1);
-            seq = 1;
-        }
-        return "IC" + date + String.format("%04d", seq);
+        return sequenceGeneratorService.generateNo("IC", SEQ_NAME);
     }
 
+    @Deprecated
     public PageResult<InventoryCheck> getCheckPage(PageQuery query, String status) {
-        List<InventoryCheck> list = inventoryCheckMapper.getCheckList(query.getKeyword(), status);
-        long total = list.size();
-        long start = (query.getCurrent() - 1) * query.getSize();
-        long end = Math.min(start + query.getSize(), total);
-        List<InventoryCheck> records = list.subList((int) start, (int) end);
-        PageResult<InventoryCheck> result = new PageResult<>();
-        result.setTotal(total);
-        result.setRecords(records);
-        result.setCurrent(query.getCurrent());
-        result.setSize(query.getSize());
-        return result;
+        InventoryCheckQuery checkQuery = InventoryCheckQuery.builder()
+                .current(query.getCurrent())
+                .size(query.getSize())
+                .keyword(query.getKeyword())
+                .status(status)
+                .build();
+        return getCheckPage(checkQuery);
+    }
+
+    public PageResult<InventoryCheck> getCheckPage(InventoryCheckQuery query) {
+        long startTime = System.currentTimeMillis();
+        Page<InventoryCheck> page = new Page<>(query.getCurrent(), query.getSize());
+        IPage<InventoryCheck> resultPage = inventoryCheckMapper.selectInventoryCheckPage(page, query);
+        long costTime = System.currentTimeMillis() - startTime;
+        if (costTime > 1000) {
+            logger.warn("Slow query detected - getCheckPage cost: {}ms, params: {}", costTime, query);
+        }
+        return PageResultConverter.convert(resultPage, query.getCurrent(), query.getSize());
     }
 
     public InventoryCheck getCheckDetail(Long id) {

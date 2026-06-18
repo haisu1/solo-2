@@ -1,28 +1,33 @@
 package com.office.supplies.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.office.supplies.common.ApprovalStatus;
 import com.office.supplies.common.BizType;
 import com.office.supplies.common.PageQuery;
 import com.office.supplies.common.PageResult;
+import com.office.supplies.common.PageResultConverter;
 import com.office.supplies.common.UserContext;
 import com.office.supplies.entity.Requisition;
 import com.office.supplies.entity.RequisitionItem;
 import com.office.supplies.entity.User;
 import com.office.supplies.mapper.RequisitionItemMapper;
 import com.office.supplies.mapper.RequisitionMapper;
+import com.office.supplies.query.RequisitionQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class RequisitionService extends ServiceImpl<RequisitionMapper, Requisition> {
+
+    private static final Logger logger = LoggerFactory.getLogger(RequisitionService.class);
 
     @Resource
     private RequisitionMapper requisitionMapper;
@@ -36,35 +41,42 @@ public class RequisitionService extends ServiceImpl<RequisitionMapper, Requisiti
     @Resource
     private ApprovalEngineService approvalEngineService;
 
-    private static final AtomicInteger SEQ = new AtomicInteger(1);
+    @Resource
+    private SequenceGeneratorService sequenceGeneratorService;
+
+    private static final String SEQ_NAME = "REQUISITION";
 
     private String generateNo() {
-        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int seq = SEQ.getAndIncrement();
-        if (seq > 9999) {
-            SEQ.set(1);
-            seq = 1;
-        }
-        return "RQ" + date + String.format("%04d", seq);
+        return sequenceGeneratorService.generateNo("RQ", SEQ_NAME);
     }
 
+    @Deprecated
     public PageResult<Requisition> getRequisitionPage(PageQuery query, String status, Long departmentId) {
         User user = UserContext.getCurrentUser();
         Long userId = null;
         if ("EMPLOYEE".equals(user.getRoleCode())) {
             userId = user.getId();
         }
-        List<Requisition> list = requisitionMapper.getRequisitionList(query.getKeyword(), userId, status, departmentId);
-        long total = list.size();
-        long start = (query.getCurrent() - 1) * query.getSize();
-        long end = Math.min(start + query.getSize(), total);
-        List<Requisition> records = list.subList((int) start, (int) end);
-        PageResult<Requisition> result = new PageResult<>();
-        result.setTotal(total);
-        result.setRecords(records);
-        result.setCurrent(query.getCurrent());
-        result.setSize(query.getSize());
-        return result;
+        RequisitionQuery requisitionQuery = RequisitionQuery.builder()
+                .current(query.getCurrent())
+                .size(query.getSize())
+                .keyword(query.getKeyword())
+                .userId(userId)
+                .status(status)
+                .departmentId(departmentId)
+                .build();
+        return getRequisitionPage(requisitionQuery);
+    }
+
+    public PageResult<Requisition> getRequisitionPage(RequisitionQuery query) {
+        long startTime = System.currentTimeMillis();
+        Page<Requisition> page = new Page<>(query.getCurrent(), query.getSize());
+        IPage<Requisition> resultPage = requisitionMapper.selectRequisitionPage(page, query);
+        long costTime = System.currentTimeMillis() - startTime;
+        if (costTime > 1000) {
+            logger.warn("Slow query detected - getRequisitionPage cost: {}ms, params: {}", costTime, query);
+        }
+        return PageResultConverter.convert(resultPage, query.getCurrent(), query.getSize());
     }
 
     public Requisition getRequisitionDetail(Long id) {

@@ -1,10 +1,14 @@
 package com.office.supplies.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.office.supplies.common.PageQuery;
 import com.office.supplies.common.PageResult;
+import com.office.supplies.common.PageResultConverter;
 import com.office.supplies.entity.Supply;
 import com.office.supplies.mapper.SupplyMapper;
+import com.office.supplies.query.SupplyQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,18 +32,28 @@ public class SupplyService extends ServiceImpl<SupplyMapper, Supply> {
     @Resource
     private StockLogService stockLogService;
 
+    @Deprecated
     public PageResult<Supply> getSupplyPage(PageQuery query, Long categoryId, Integer status, Boolean lowStock) {
-        List<Supply> list = supplyMapper.getSupplyList(query.getKeyword(), categoryId, status, lowStock);
-        long total = list.size();
-        long start = (query.getCurrent() - 1) * query.getSize();
-        long end = Math.min(start + query.getSize(), total);
-        List<Supply> records = list.subList((int) start, (int) end);
-        PageResult<Supply> result = new PageResult<>();
-        result.setTotal(total);
-        result.setRecords(records);
-        result.setCurrent(query.getCurrent());
-        result.setSize(query.getSize());
-        return result;
+        SupplyQuery supplyQuery = SupplyQuery.builder()
+                .current(query.getCurrent())
+                .size(query.getSize())
+                .keyword(query.getKeyword())
+                .categoryId(categoryId)
+                .status(status)
+                .lowStock(lowStock)
+                .build();
+        return getSupplyPage(supplyQuery);
+    }
+
+    public PageResult<Supply> getSupplyPage(SupplyQuery query) {
+        long startTime = System.currentTimeMillis();
+        Page<Supply> page = new Page<>(query.getCurrent(), query.getSize());
+        IPage<Supply> resultPage = supplyMapper.selectSupplyPage(page, query);
+        long costTime = System.currentTimeMillis() - startTime;
+        if (costTime > 1000) {
+            logger.warn("Slow query detected - getSupplyPage cost: {}ms, params: {}", costTime, query);
+        }
+        return PageResultConverter.convert(resultPage, query.getCurrent(), query.getSize());
     }
 
     public List<Supply> getSupplyList(Long categoryId, String keyword) {
