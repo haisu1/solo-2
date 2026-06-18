@@ -112,7 +112,30 @@
           <span class="breadcrumb">{{ currentTitle }}</span>
         </div>
         <div class="header-right">
-          <el-dropdown @command="handleCommand">
+          <el-popover
+            placement="bottom-end"
+            width="400"
+            v-model="messagePopoverVisible"
+            trigger="click">
+            <div class="warning-message-popover">
+              <div class="popover-header">
+                <span>预警消息</span>
+                <el-button type="text" size="mini" @click="goToDashboard">查看全部</el-button>
+              </div>
+              <div class="popover-list" v-loading="messageLoading">
+                <div v-for="msg in latestMessages" :key="msg.id" class="popover-item" :class="{ unread: !msg.readFlag }">
+                  <el-tag :type="getWarningTagType(msg.warningLevel)" size="mini">{{ msg.warningLevelDesc }}</el-tag>
+                  <div class="popover-content">{{ msg.warningContent }}</div>
+                  <div class="popover-time">{{ formatTime(msg.createTime) }}</div>
+                </div>
+                <el-empty v-if="latestMessages.length === 0 && !messageLoading" description="暂无预警消息" :image-size="60"></el-empty>
+              </div>
+            </div>
+            <el-badge slot="reference" :value="unreadTotal" :hidden="unreadTotal === 0" class="warning-badge" :max="99">
+              <i class="el-icon-bell" style="font-size: 20px; cursor: pointer; color: #606266;"></i>
+            </el-badge>
+          </el-popover>
+          <el-dropdown @command="handleCommand" style="margin-left: 20px;">
             <span class="user-info">
               <i class="el-icon-user-solid"></i>
               {{ user ? user.realName : '' }}
@@ -133,8 +156,19 @@
 </template>
 
 <script>
+import { getUnreadStatistics, getWarningMessages } from '@/api/warning'
+
 export default {
   name: 'Layout',
+  data() {
+    return {
+      messagePopoverVisible: false,
+      messageLoading: false,
+      latestMessages: [],
+      unreadTotal: 0,
+      refreshTimer: null
+    }
+  },
   computed: {
     user() {
       return this.$store.state.user
@@ -155,7 +189,51 @@ export default {
       return this.$route.meta.title || ''
     }
   },
+  mounted() {
+    this.loadUnreadCount()
+    this.refreshTimer = setInterval(() => {
+      this.loadUnreadCount()
+    }, 60000)
+  },
+  beforeDestroy() {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer)
+    }
+  },
+  watch: {
+    messagePopoverVisible(val) {
+      if (val) {
+        this.loadLatestMessages()
+      }
+    }
+  },
   methods: {
+    async loadUnreadCount() {
+      try {
+        const stats = await getUnreadStatistics()
+        this.unreadTotal = stats.total || 0
+      } catch (e) {}
+    },
+    async loadLatestMessages() {
+      this.messageLoading = true
+      try {
+        this.latestMessages = (await getWarningMessages({})).slice(0, 5)
+      } finally {
+        this.messageLoading = false
+      }
+    },
+    goToDashboard() {
+      this.messagePopoverVisible = false
+      this.$router.push('/dashboard')
+    },
+    formatTime(time) {
+      if (!time) return ''
+      return time.replace('T', ' ').substring(0, 16)
+    },
+    getWarningTagType(level) {
+      const map = { NORMAL: 'success', ATTENTION: '', WARNING: 'warning', URGENT: 'danger' }
+      return map[level] || ''
+    },
     handleCommand(command) {
       if (command === 'logout') {
         this.$confirm('确定要退出登录吗？', '提示', {
@@ -211,6 +289,11 @@ export default {
     }
   }
   .header-right {
+    display: flex;
+    align-items: center;
+    .warning-badge {
+      margin-right: 5px;
+    }
     .user-info {
       cursor: pointer;
       color: #606266;
@@ -224,5 +307,44 @@ export default {
   background: #f0f2f5;
   padding: 0;
   overflow-y: auto;
+}
+.warning-message-popover {
+  .popover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ebeef5;
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .popover-list {
+    max-height: 350px;
+    overflow-y: auto;
+  }
+  .popover-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f7fa;
+    &:last-child {
+      border-bottom: none;
+    }
+    &.unread {
+      background: #fef0f0;
+      margin: 0 -12px;
+      padding: 10px 12px;
+      border-radius: 4px;
+    }
+    .popover-content {
+      font-size: 13px;
+      color: #303133;
+      margin: 6px 0;
+      line-height: 1.5;
+    }
+    .popover-time {
+      font-size: 12px;
+      color: #909399;
+    }
+  }
 }
 </style>

@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS biz_approval_record;
 DROP TABLE IF EXISTS biz_approval_node;
 DROP TABLE IF EXISTS biz_approval_flow;
 DROP TABLE IF EXISTS biz_stock_log;
+DROP TABLE IF EXISTS biz_warning_message;
 
 CREATE TABLE sys_role (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -208,5 +209,21 @@ CREATE TABLE biz_approval_record (
     approve_time TIMESTAMP,
     transfer_from_id BIGINT,
     transfer_from_name VARCHAR(50),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE biz_warning_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    supply_id BIGINT NOT NULL,
+    supply_name VARCHAR(200),
+    supply_code VARCHAR(50),
+    warning_level VARCHAR(20) NOT NULL,
+    warning_content VARCHAR(1000),
+    current_stock INT DEFAULT 0,
+    safe_stock_quantity INT DEFAULT 0,
+    stock_days INT DEFAULT 0,
+    user_id BIGINT,
+    read_flag INT DEFAULT 0,
+    read_time TIMESTAMP,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

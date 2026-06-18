@@ -1,7 +1,9 @@
 package com.office.supplies.service;
 
+import com.office.supplies.common.UserContext;
 import com.office.supplies.entity.Requisition;
 import com.office.supplies.entity.Supply;
+import com.office.supplies.entity.User;
 import com.office.supplies.mapper.RequisitionMapper;
 import com.office.supplies.mapper.SupplyMapper;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,15 @@ public class StatisticsService {
     @Resource
     private RequisitionMapper requisitionMapper;
 
+    @Resource
+    private InventoryWarningService inventoryWarningService;
+
+    @Resource
+    private WarningNotificationService warningNotificationService;
+
+    @Resource
+    private PurchaseSuggestionService purchaseSuggestionService;
+
     public Map<String, Object> getDashboardData() {
         Map<String, Object> result = new HashMap<>();
         List<Supply> allSupplies = supplyMapper.getSupplyList(null, null, null, false);
@@ -37,6 +48,20 @@ public class StatisticsService {
         result.put("pendingRequisitionCount", pendingRequisitions.size());
         result.put("totalRequisitionCount", allRequisitions.size());
         result.put("lowStockList", lowStock);
+
+        result.put("warningStatistics", inventoryWarningService.getWarningStatistics());
+        result.put("warningSupplyList", inventoryWarningService.getWarningSupplies());
+
+        try {
+            User user = UserContext.getCurrentUser();
+            if (user != null) {
+                result.put("unreadWarningCount", warningNotificationService.getUnreadStatistics(user.getId()));
+            }
+        } catch (Exception e) {
+        }
+
+        result.put("purchaseSuggestionStatistics", purchaseSuggestionService.getPurchaseSuggestionStatistics());
+
         return result;
     }
 
